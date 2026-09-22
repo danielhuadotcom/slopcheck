@@ -8,50 +8,45 @@ permissions:
   pull-requests: write
 
 jobs:
-  changed:
-    name: slop check (diff scope)
+  slop:
+    name: slop check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
-      - id: files
-        name: Collect changed Python files
-        run: |
-          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
-          CHANGED=$(git diff --name-only --diff-filter=ACMR \
-            "origin/${{ github.base_ref }}"...HEAD -- '*.py' | tr '\n' ' ')
-          echo "Changed: ${CHANGED:-<none>}"
-          echo "paths=$CHANGED" >> "$GITHUB_OUTPUT"
+      - name: Check out the base commit
+        run: git checkout -q HEAD^1
 
-      - if: steps.files.outputs.paths != ''
+      - name: Lint the base commit
         uses: danielhuadotcom/sloplint2@v0.5.0
-        with:
-          paths: ${{ steps.files.outputs.paths }}
-          comment: "true"
-          upload-sarif: "false"
-          fail-on-findings: "true"
-
-      - if: always() && hashFiles('sloplint.sarif') != ''
-        name: Post inline review comments
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: .github/scripts/review.sh sloplint.sarif sloplint
-
-  tree:
-    name: slop check (repo scope)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: danielhuadotcom/sloplint2@v0.5.0
         with:
           paths: .
           comment: "false"
           upload-sarif: "false"
-          fail-on-findings: "true"
+          fail-on-findings: "false"
+
+      - name: Check out the PR merge commit
+        run: |
+          mv sloplint.sarif "$RUNNER_TEMP/base.sarif"
+          git checkout -q "$GITHUB_SHA"
+
+      - name: Lint the PR merge commit
+        uses: danielhuadotcom/sloplint2@v0.5.0
+        with:
+          paths: .
+          comment: "false"
+          upload-sarif: "false"
+          fail-on-findings: "false"
+
+      - name: Post new findings as review comments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DIR_RULES: SLP090
+        run: .github/scripts/review.sh sloplint sloplint.sarif "$RUNNER_TEMP/base.sarif"
 
   ruff:
     name: ruff check
@@ -75,4 +70,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: .github/scripts/review.sh ruff.sarif ruff
+        run: .github/scripts/review.sh ruff ruff.sarif
