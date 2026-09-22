@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   changed:
-    name: slop check (changed files)
+    name: slop check (diff scope)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,20 +30,18 @@ jobs:
         uses: danielhuadotcom/sloplint2@v0.5.0
         with:
           paths: ${{ steps.files.outputs.paths }}
-          config: sloplint.changed.toml
           comment: "true"
           upload-sarif: "true"
           fail-on-findings: "true"
 
   tree:
-    name: slop check (whole tree)
+    name: slop check (repo scope)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: danielhuadotcom/sloplint2@v0.5.0
         with:
           paths: .
-          config: sloplint.tree.toml
           comment: "false"
           upload-sarif: "false"
           fail-on-findings: "true"
