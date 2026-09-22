@@ -1,0 +1,49 @@
+name: sloplint
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  changed:
+    name: slop check (changed files)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: files
+        name: Collect changed Python files
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          CHANGED=$(git diff --name-only --diff-filter=ACMR \
+            "origin/${{ github.base_ref }}"...HEAD -- '*.py' | tr '\n' ' ')
+          echo "Changed: ${CHANGED:-<none>}"
+          echo "paths=$CHANGED" >> "$GITHUB_OUTPUT"
+
+      - if: steps.files.outputs.paths != ''
+        uses: danielhuadotcom/sloplint2@v0.5.0
+        with:
+          paths: ${{ steps.files.outputs.paths }}
+          config: sloplint.changed.toml
+          comment: "true"
+          upload-sarif: "true"
+          fail-on-findings: "true"
+
+  tree:
+    name: slop check (whole tree)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: danielhuadotcom/sloplint2@v0.5.0
+        with:
+          paths: .
+          config: sloplint.tree.toml
+          comment: "false"
+          upload-sarif: "false"
+          fail-on-findings: "true"
