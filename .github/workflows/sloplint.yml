@@ -5,7 +5,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
   pull-requests: write
 
 jobs:
@@ -31,8 +30,16 @@ jobs:
         with:
           paths: ${{ steps.files.outputs.paths }}
           comment: "true"
-          upload-sarif: "true"
+          upload-sarif: "false"
           fail-on-findings: "true"
+
+      - if: always() && hashFiles('sloplint.sarif') != ''
+        name: Post inline review comments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: .github/scripts/review.sh sloplint.sarif sloplint
 
   tree:
     name: slop check (repo scope)
@@ -49,8 +56,23 @@ jobs:
   ruff:
     name: ruff check
     runs-on: ubuntu-latest
+    env:
+      RUFF_SELECT: E,F,N,PLE,PLC,I,B,UP
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/ruff-action@v3
         with:
-          args: check --select E,F,N,PLE,PLC,I,B,UP
+          args: --version
+
+      - name: Run ruff
+        run: |
+          ruff check --select "$RUFF_SELECT" --output-format sarif --output-file ruff.sarif . || true
+          ruff check --select "$RUFF_SELECT" .
+
+      - if: always() && hashFiles('ruff.sarif') != ''
+        name: Post inline review comments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: .github/scripts/review.sh ruff.sarif ruff
