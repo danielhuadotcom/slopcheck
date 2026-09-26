@@ -12,7 +12,7 @@ jobs:
     name: slop check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 2
 
@@ -54,7 +54,7 @@ jobs:
     env:
       RUFF_SELECT: E,F,N,PLE,PLC,I,B,UP
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: astral-sh/ruff-action@v3
         with:
           args: --version
@@ -76,7 +76,7 @@ jobs:
     name: pr rules
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
