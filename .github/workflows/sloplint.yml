@@ -55,7 +55,7 @@ jobs:
       RUFF_SELECT: E,F,N,PLE,PLC,I,B,UP
     steps:
       - uses: actions/checkout@v5
-      - uses: astral-sh/ruff-action@v3
+      - uses: astral-sh/ruff-action@v4.1.0
         with:
           args: --version
 
